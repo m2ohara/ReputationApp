@@ -28,16 +28,17 @@ import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMultiplayer.I
 import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMultiplayer.UpdateMatchResult;
 
 public class TurnBasedActivity extends Activity
-implements ConnectionCallbacks, OnConnectionFailedListener,
+implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener,
 OnInvitationReceivedListener, OnTurnBasedMatchUpdateReceivedListener,
-OnClickListener {
+View.OnClickListener {
 	
 	public static final String TAG = "TurnBasedActivity";
 	private GoogleApiClient googleApiClient;
 	
 	private static final int RC_SIGN_IN = 9001;
+	private boolean signInClicked = false;
 	
-	private TurnBasedMatch mTurnBasedMatch;	
+	private TurnBasedMatch turnBasedMatch;	
     public boolean isDoingTurn = false;
     public TurnBasedMatch mMatch;    
     public TurnData mTurnData;
@@ -48,6 +49,9 @@ OnClickListener {
     public void onCreate(Bundle savedInstanceState) {
     	super.onCreate(savedInstanceState);
     	setContentView(R.layout.activity_turnbased);
+    	
+        findViewById(R.id.sign_in_button).setOnClickListener(this);
+        findViewById(R.id.sign_out_button).setOnClickListener(this);
     	
     	googleApiClient = new GoogleApiClient.Builder(this)
     	.addConnectionCallbacks(this)
@@ -63,6 +67,39 @@ OnClickListener {
     	googleApiClient.connect();
     }
     
+	@Override
+	public void onConnected(Bundle connectionHint) {
+        Log.d(TAG, "onConnected(): Connection successful");
+        // show sign-out button, hide the sign-in button
+        findViewById(R.id.sign_in_button).setVisibility(View.GONE);
+        findViewById(R.id.sign_out_button).setVisibility(View.VISIBLE);
+        
+        if (connectionHint == null) {
+        	onStartMatchClicked();
+        }
+
+        // Retrieve the TurnBasedMatch from the connectionHint
+//        if (connectionHint != null) {
+//            mTurnBasedMatch = connectionHint.getParcelable(Multiplayer.EXTRA_TURN_BASED_MATCH);
+//
+//            if (mTurnBasedMatch != null) {
+//                if (googleApiClient == null || !googleApiClient.isConnected()) {
+//                    Log.d(TAG, "Warning: accessing TurnBasedMatch when not connected");
+//                }
+//
+//                updateMatch(mTurnBasedMatch);
+//                return;
+//            }
+//        }
+		
+	}
+
+	@Override
+	public void onConnectionSuspended(int arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+    
     @Override
     public void onStop() {
     	super.onStop();
@@ -72,19 +109,54 @@ OnClickListener {
     	}
     }
     
+	@Override
+	public void onClick(View v) {
+        switch (v.getId()) {
+        case R.id.sign_in_button:
+            // Check to see the developer who's running this sample code read the instructions :-)
+            // NOTE: this check is here only because this is a sample! Don't include this
+            // check in your actual production app.
+//            if (!BaseGameUtils.verifySampleSetup(this, R.string.app_id)) {
+//                Log.w(TAG, "*** Warning: setup problems detected. Sign in may not work!");
+//            }
+
+            signInClicked = true;
+            turnBasedMatch = null;
+            findViewById(R.id.sign_in_button).setVisibility(View.GONE);
+            googleApiClient.connect();
+            break;
+        case R.id.sign_out_button:
+            signInClicked = false;
+            Games.signOut(googleApiClient);
+            if (googleApiClient.isConnected()) {
+                googleApiClient.disconnect();
+            }
+            setViewVisibility();
+            break;
+    }
+	}
+    
+    public void onStartMatchClicked() {
+    	
+        Intent intent =
+            Games.TurnBasedMultiplayer.getSelectOpponentsIntent(googleApiClient, 1, 7, true);
+        startActivityForResult(intent, 1000);
+    }
+    
     @Override
     public void onActivityResult(int request, int response, Intent data) {
         super.onActivityResult(request, response, data);
         
-//        if (request == RC_SIGN_IN) {
-//            mSignInClicked = false;
+        if (request == RC_SIGN_IN) {
+            signInClicked = false;
 //            mResolvingConnectionFailure = false;
-//            if (response == Activity.RESULT_OK) {
-//                googleApiClient.connect();
-//            } else {
+            if (response == Activity.RESULT_OK) {
+                googleApiClient.connect();
+            } 
+//            else {
 //                BaseGameUtils.showActivityResultError(this, request, response, R.string.signin_other_error);
 //            }
-//        }
+        }
         
         final ArrayList<String> invitees = data
                 .getStringArrayListExtra(Games.EXTRA_PLAYER_IDS);
@@ -105,12 +177,6 @@ OnClickListener {
     	
     	Games.TurnBasedMultiplayer.createMatch(googleApiClient, tbmc).setResultCallback((com.google.android.gms.common.api.ResultCallback<? super InitiateMatchResult>) rc);
     }
-
-	@Override
-	public void onClick(View v) {
-		// TODO Auto-generated method stub
-		
-	}
 
 	@Override
 	public void onTurnBasedMatchReceived(TurnBasedMatch arg0) {
@@ -138,33 +204,8 @@ OnClickListener {
 
 	@Override
 	public void onConnectionFailed(ConnectionResult arg0) {
-		// TODO Auto-generated method stub
 		
-	}
-
-	@Override
-	public void onConnected(Bundle connectionHint) {
-        Log.d(TAG, "onConnected(): Connection successful");
-
-        // Retrieve the TurnBasedMatch from the connectionHint
-        if (connectionHint != null) {
-            mTurnBasedMatch = connectionHint.getParcelable(Multiplayer.EXTRA_TURN_BASED_MATCH);
-
-            if (mTurnBasedMatch != null) {
-                if (googleApiClient == null || !googleApiClient.isConnected()) {
-                    Log.d(TAG, "Warning: accessing TurnBasedMatch when not connected");
-                }
-
-                updateMatch(mTurnBasedMatch);
-                return;
-            }
-        }
-		
-	}
-
-	@Override
-	public void onConnectionSuspended(int arg0) {
-		// TODO Auto-generated method stub
+		Log.d(TAG, "Error: connection failed: "+arg0);
 		
 	}
 	
@@ -172,8 +213,8 @@ OnClickListener {
         boolean isSignedIn = (googleApiClient != null) && (googleApiClient.isConnected());
 
         if (!isSignedIn) {
-//            findViewById(R.id.login_layout).setVisibility(View.VISIBLE);
-//            findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
+            findViewById(R.id.sign_out_button).setVisibility(View.VISIBLE);
+            findViewById(R.id.sign_in_button).setVisibility(View.VISIBLE);
             findViewById(R.id.matchup_layout).setVisibility(View.GONE);
             findViewById(R.id.gameplay_layout).setVisibility(View.GONE);
 
@@ -202,6 +243,35 @@ OnClickListener {
         setViewVisibility();
 //        mDataView.setText(mTurnData.data);
 //        mTurnTextView.setText("Turn " + mTurnData.turnCounter);
+    }
+    
+    // startMatch() happens in response to the createTurnBasedMatch()
+    // above. This is only called on success, so we should have a
+    // valid match object. We're taking this opportunity to setup the
+    // game, saving our initial state. Calling takeTurn() will
+    // callback to OnTurnBasedMatchUpdated(), which will show the game
+    // UI.
+    public void startMatch(TurnBasedMatch match) {
+        mTurnData = new TurnData();
+        // Some basic turn data
+        mTurnData.data = "First turn";
+
+        mMatch = match;
+
+        String playerId = Games.Players.getCurrentPlayerId(googleApiClient);
+        String myParticipantId = mMatch.getParticipantId(playerId);
+        
+        ResultCallback<TurnBasedMultiplayer.UpdateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.UpdateMatchResult>() {
+
+			@Override
+			public void onReceiveResult(TurnBasedMultiplayer.UpdateMatchResult result)
+					throws RemoteException {
+				processResult(result);
+			}
+        };
+
+        Games.TurnBasedMultiplayer.takeTurn(googleApiClient, match.getMatchId(),
+                mTurnData.persist(), myParticipantId).setResultCallback((com.google.android.gms.common.api.ResultCallback<? super UpdateMatchResult>) rc);
     }
 	
     public void updateMatch(TurnBasedMatch match) {
@@ -287,35 +357,6 @@ OnClickListener {
         }
 
         setViewVisibility();
-    }
-    
-    // startMatch() happens in response to the createTurnBasedMatch()
-    // above. This is only called on success, so we should have a
-    // valid match object. We're taking this opportunity to setup the
-    // game, saving our initial state. Calling takeTurn() will
-    // callback to OnTurnBasedMatchUpdated(), which will show the game
-    // UI.
-    public void startMatch(TurnBasedMatch match) {
-        mTurnData = new TurnData();
-        // Some basic turn data
-        mTurnData.data = "First turn";
-
-        mMatch = match;
-
-        String playerId = Games.Players.getCurrentPlayerId(googleApiClient);
-        String myParticipantId = mMatch.getParticipantId(playerId);
-        
-        ResultCallback<TurnBasedMultiplayer.UpdateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.UpdateMatchResult>() {
-
-			@Override
-			public void onReceiveResult(TurnBasedMultiplayer.UpdateMatchResult result)
-					throws RemoteException {
-				processResult(result);
-			}
-        };
-
-        Games.TurnBasedMultiplayer.takeTurn(googleApiClient, match.getMatchId(),
-                mTurnData.persist(), myParticipantId).setResultCallback((com.google.android.gms.common.api.ResultCallback<? super UpdateMatchResult>) rc);
     }
     
 //    public void showWarning(String title, String message) {

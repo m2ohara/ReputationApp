@@ -1,5 +1,6 @@
 package com.app.reputation;
 
+import android.content.Intent;
 import android.inputmethodservice.InputMethodService;
 import android.inputmethodservice.Keyboard;
 import android.inputmethodservice.KeyboardView;
@@ -16,6 +17,8 @@ private KeyboardView kv;
 private Keyboard keyboard;
  
 private boolean caps = false;
+
+private TurnBasedActivity turnBasedActivity = new TurnBasedActivity();
 
 @Override
 public View onCreateInputView() {
@@ -50,6 +53,12 @@ public void onKey(int primaryCode, int[] keyCodes) {
     switch(primaryCode){
     case Keyboard.KEYCODE_DELETE :
         ic.deleteSurroundingText(1, 0);
+        
+        // open activity
+        Intent newIntent = new Intent(this, TurnBasedActivity.class);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(newIntent);      
+
         break;
     case Keyboard.KEYCODE_SHIFT:
         caps = !caps;
@@ -96,4 +105,6 @@ public void swipeRight() {
 @Override
 public void swipeUp() {
 }
+
+
 }
