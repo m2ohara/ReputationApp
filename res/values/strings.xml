@@ -7,5 +7,6 @@
     <string name="simple_ime">Simple IME</string>
     <string name="subtype_en_US">English (US)</string>
     <string name="app_id">505138272643</string>
+    <color name="grey">#B2B2B2</color>
 
 </resources>

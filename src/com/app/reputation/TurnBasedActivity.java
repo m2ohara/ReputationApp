@@ -6,19 +6,18 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.RemoteException;
-import android.service.carrier.CarrierMessagingService.ResultCallback;
 import android.util.Log;
 import android.view.View;
-import android.view.View.OnClickListener;
+import android.widget.AdapterView;
+import android.widget.AdapterView.OnItemClickListener;
+import android.widget.GridView;
+import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
-import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.games.Games;
 import com.google.android.gms.games.multiplayer.Invitation;
-import com.google.android.gms.games.multiplayer.Multiplayer;
 import com.google.android.gms.games.multiplayer.OnInvitationReceivedListener;
 import com.google.android.gms.games.multiplayer.turnbased.OnTurnBasedMatchUpdateReceivedListener;
 import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
@@ -58,6 +57,8 @@ View.OnClickListener {
     	.addOnConnectionFailedListener(this)
     	.addApi(Games.API).addScope(Games.SCOPE_GAMES)
     	.build();
+    	
+    	createGrid(); 
     }
     
     @Override
@@ -167,7 +168,7 @@ View.OnClickListener {
     	
     	ResultCallback<InitiateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.InitiateMatchResult>() {
 			@Override
-			public void onReceiveResult(InitiateMatchResult result)
+			public void onResult(InitiateMatchResult result)
 			{
 				processResult(result);
 				
@@ -175,7 +176,7 @@ View.OnClickListener {
 			
     	};
     	
-    	Games.TurnBasedMultiplayer.createMatch(googleApiClient, tbmc).setResultCallback((com.google.android.gms.common.api.ResultCallback<? super InitiateMatchResult>) rc);
+    	Games.TurnBasedMultiplayer.createMatch(googleApiClient, tbmc).setResultCallback(rc);
     }
 
 	@Override
@@ -264,14 +265,14 @@ View.OnClickListener {
         ResultCallback<TurnBasedMultiplayer.UpdateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.UpdateMatchResult>() {
 
 			@Override
-			public void onReceiveResult(TurnBasedMultiplayer.UpdateMatchResult result)
-					throws RemoteException {
+			public void onResult(UpdateMatchResult result) {
 				processResult(result);
+				
 			}
         };
 
         Games.TurnBasedMultiplayer.takeTurn(googleApiClient, match.getMatchId(),
-                mTurnData.persist(), myParticipantId).setResultCallback((com.google.android.gms.common.api.ResultCallback<? super UpdateMatchResult>) rc);
+                mTurnData.persist(), myParticipantId).setResultCallback(rc);
     }
 	
     public void updateMatch(TurnBasedMatch match) {
@@ -381,5 +382,18 @@ View.OnClickListener {
 //        // show it
 //        mAlertDialog.show();
 //    }
+    
+    public void createGrid() {
+        GridView gridview = (GridView) findViewById(R.id.gridview);
+        gridview.setAdapter(new ImageAdapter(this));
+
+        gridview.setOnItemClickListener(new OnItemClickListener() {
+            public void onItemClick(AdapterView<?> parent, View v,
+                    int position, long id) {
+                Toast.makeText(TurnBasedActivity.this, "" + position,
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
 
 }

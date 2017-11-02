@@ -53,12 +53,6 @@ public void onKey(int primaryCode, int[] keyCodes) {
     switch(primaryCode){
     case Keyboard.KEYCODE_DELETE :
         ic.deleteSurroundingText(1, 0);
-        
-        // open activity
-        Intent newIntent = new Intent(this, TurnBasedActivity.class);
-        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        startActivity(newIntent);      
-
         break;
     case Keyboard.KEYCODE_SHIFT:
         caps = !caps;
@@ -67,6 +61,12 @@ public void onKey(int primaryCode, int[] keyCodes) {
         break;
     case Keyboard.KEYCODE_DONE:
         ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+        break;
+    case 44:
+        // open activity
+        Intent newIntent = new Intent(this, TurnBasedActivity.class);
+        newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        startActivity(newIntent);
         break;
     default:
         char code = (char)primaryCode;
