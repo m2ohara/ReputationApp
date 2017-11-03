@@ -4,12 +4,16 @@ import java.util.ArrayList;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipDescription;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.View.OnLongClickListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.GridView;
 import android.widget.Toast;
 
@@ -52,20 +56,22 @@ View.OnClickListener {
         findViewById(R.id.sign_in_button).setOnClickListener(this);
         findViewById(R.id.sign_out_button).setOnClickListener(this);
     	
-    	googleApiClient = new GoogleApiClient.Builder(this)
-    	.addConnectionCallbacks(this)
-    	.addOnConnectionFailedListener(this)
-    	.addApi(Games.API).addScope(Games.SCOPE_GAMES)
-    	.build();
+//    	googleApiClient = new GoogleApiClient.Builder(this)
+//    	.addConnectionCallbacks(this)
+//    	.addOnConnectionFailedListener(this)
+//    	.addApi(Games.API).addScope(Games.SCOPE_GAMES)
+//    	.build();
     	
     	createGrid(); 
+    	
+    	setContactView();
     }
     
     @Override
     public void onStart() {
     	super.onStart();
     	Log.d(TAG, "onStart: connecting to Google APIs");
-    	googleApiClient.connect();
+//    	googleApiClient.connect();
     }
     
 	@Override
@@ -387,13 +393,39 @@ View.OnClickListener {
         GridView gridview = (GridView) findViewById(R.id.gridview);
         gridview.setAdapter(new ImageAdapter(this));
 
-        gridview.setOnItemClickListener(new OnItemClickListener() {
-            public void onItemClick(AdapterView<?> parent, View v,
-                    int position, long id) {
-                Toast.makeText(TurnBasedActivity.this, "" + position,
-                        Toast.LENGTH_SHORT).show();
-            }
-        });
+        gridview.setOnItemLongClickListener(new OnItemLongClickListener() {
+
+			@Override
+			public boolean onItemLongClick(AdapterView<?> arg0, View v,
+					int arg2, long arg3) {
+				
+                // Create a new ClipData.Item from the ImageView object's tag
+                ClipData.Item item = new ClipData.Item("Test data");
+
+                ClipData dragData = new ClipData("Test Data", new String[] {ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+
+                // Instantiates the drag shadow builder.
+                View.DragShadowBuilder shadow = new DragShadowBuilder(v);
+                
+//                v.setOnDragListener(new DragEventListener());
+
+                // Starts the drag
+
+                v.startDrag(dragData,  // the data to be dragged
+                		shadow,  // the drag shadow builder
+                		null,      // no need to use local data
+                		0          // flags (not currently used, set to 0)
+                		);
+                
+                return false;
+			}});
+
+    }
+    
+    public void setContactView() {
+    	View contactView = findViewById(R.id.imageView1);
+    	
+    	contactView.setOnDragListener(new DragEventListener());
     }
 
 }
