@@ -2696,6 +2696,7 @@ containing a value of this type.
         /**  Label of a button to disconnect an active cast display connection.  [CHAR LIMIT=25] NOTE: Same text as msgid="9024230238785261495" 
          */
         public static final int cast_notification_disconnect=0x7f090026;
+        public static final int client_reconnect_required=0x7f090044;
         /**  Message in confirmation dialog informing the user that one of the APIs they attepmt to access is not available. [CHAR LIMIT=NONE] 
          */
         public static final int common_google_play_services_api_unavailable_text=0x7f09001d;
@@ -2800,16 +2801,24 @@ containing a value of this type.
         public static final int create_calendar_title=0x7f090004;
         public static final int decline=0x7f090003;
         public static final int hello_world=0x7f09003c;
+        public static final int internal_error=0x7f090046;
+        public static final int match_error_already_rematched=0x7f090043;
+        public static final int match_error_inactive_match=0x7f090048;
+        public static final int match_error_locally_modified=0x7f090049;
+        public static final int network_error_operation_failed=0x7f090045;
         /**  Description of the button that clears the search input when searching for places. 
          */
         public static final int place_autocomplete_clear_button=0x7f090029;
         /**  Search box hint text for Place Autocomplete. [CHAR LIMIT=15] 
          */
         public static final int place_autocomplete_search_hint=0x7f090028;
+        public static final int signin_other_error=0x7f090041;
         public static final int simple_ime=0x7f09003e;
+        public static final int status_multiplayer_error_not_trusted_tester=0x7f090042;
         public static final int store_picture_message=0x7f090001;
         public static final int store_picture_title=0x7f090000;
         public static final int subtype_en_US=0x7f09003f;
+        public static final int unexpected_status=0x7f090047;
         /**  Text on a placeholder buy button when Google Play services is not
          available or up-to-date 
  Text on a button that allows a user to make a payment with Google Wallet

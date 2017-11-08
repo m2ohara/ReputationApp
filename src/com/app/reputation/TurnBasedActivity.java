@@ -1,27 +1,30 @@
 package com.app.reputation;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
-import android.view.View.OnLongClickListener;
 import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemClickListener;
 import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.GridView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.ResultCallback;
 import com.google.android.gms.games.Games;
+import com.google.android.gms.games.GamesStatusCodes;
 import com.google.android.gms.games.multiplayer.Invitation;
+import com.google.android.gms.games.multiplayer.Multiplayer;
 import com.google.android.gms.games.multiplayer.OnInvitationReceivedListener;
 import com.google.android.gms.games.multiplayer.turnbased.OnTurnBasedMatchUpdateReceivedListener;
 import com.google.android.gms.games.multiplayer.turnbased.TurnBasedMatch;
@@ -39,6 +42,9 @@ View.OnClickListener {
 	private GoogleApiClient googleApiClient;
 	
 	private static final int RC_SIGN_IN = 9001;
+	final static int RC_SELECT_PLAYERS = 1000;
+	final static int RC_LOOK_AT_MATCHES = 10001;
+	
 	private boolean signInClicked = false;
 	
 	private TurnBasedMatch turnBasedMatch;	
@@ -56,11 +62,11 @@ View.OnClickListener {
         findViewById(R.id.sign_in_button).setOnClickListener(this);
         findViewById(R.id.sign_out_button).setOnClickListener(this);
     	
-//    	googleApiClient = new GoogleApiClient.Builder(this)
-//    	.addConnectionCallbacks(this)
-//    	.addOnConnectionFailedListener(this)
-//    	.addApi(Games.API).addScope(Games.SCOPE_GAMES)
-//    	.build();
+    	googleApiClient = new GoogleApiClient.Builder(this)
+    	.addConnectionCallbacks(this)
+    	.addOnConnectionFailedListener(this)
+    	.addApi(Games.API).addScope(Games.SCOPE_GAMES)
+    	.build();
     	
     	createGrid(); 
     	
@@ -71,7 +77,16 @@ View.OnClickListener {
     public void onStart() {
     	super.onStart();
     	Log.d(TAG, "onStart: connecting to Google APIs");
-//    	googleApiClient.connect();
+    	googleApiClient.connect();
+    }
+    
+    @Override
+    public void onStop() {
+    	super.onStop();
+    	if(googleApiClient.isConnected()) {
+    		googleApiClient.disconnect();
+    		Log.d(TAG, "onStop: disconnecting from Google APIs");
+    	}
     }
     
 	@Override
@@ -82,39 +97,26 @@ View.OnClickListener {
         findViewById(R.id.sign_out_button).setVisibility(View.VISIBLE);
         
         if (connectionHint == null) {
-        	onStartMatchClicked();
+        	//onStartMatchInitiated(); 
+        	//onCheckGamesClicked();
+//        	createMatch();
         }
 
         // Retrieve the TurnBasedMatch from the connectionHint
-//        if (connectionHint != null) {
-//            mTurnBasedMatch = connectionHint.getParcelable(Multiplayer.EXTRA_TURN_BASED_MATCH);
-//
-//            if (mTurnBasedMatch != null) {
-//                if (googleApiClient == null || !googleApiClient.isConnected()) {
-//                    Log.d(TAG, "Warning: accessing TurnBasedMatch when not connected");
-//                }
-//
-//                updateMatch(mTurnBasedMatch);
-//                return;
-//            }
-//        }
-		
-	}
+        if (connectionHint != null) {
+            turnBasedMatch = connectionHint.getParcelable(Multiplayer.EXTRA_TURN_BASED_MATCH);
 
-	@Override
-	public void onConnectionSuspended(int arg0) {
-		// TODO Auto-generated method stub
+            if (turnBasedMatch != null) {
+                if (googleApiClient == null || !googleApiClient.isConnected()) {
+                    Log.d(TAG, "Warning: accessing TurnBasedMatch when not connected");
+                }
+
+                updateMatch(turnBasedMatch);
+                return;
+            }
+        }
 		
 	}
-    
-    @Override
-    public void onStop() {
-    	super.onStop();
-    	if(googleApiClient.isConnected()) {
-    		googleApiClient.disconnect();
-    		Log.d(TAG, "onStop: disconnecting from Google APIs");
-    	}
-    }
     
 	@Override
 	public void onClick(View v) {
@@ -142,31 +144,23 @@ View.OnClickListener {
             break;
     }
 	}
+	
+    public void onCheckGamesClicked() {
+        Intent intent = 
+        		Games.TurnBasedMultiplayer.getInboxIntent(googleApiClient);
+        startActivityForResult(intent, RC_LOOK_AT_MATCHES);
+    }
     
-    public void onStartMatchClicked() {
+    public void onStartMatchInitiated() {
     	
         Intent intent =
             Games.TurnBasedMultiplayer.getSelectOpponentsIntent(googleApiClient, 1, 7, true);
-        startActivityForResult(intent, 1000);
+        startActivityForResult(intent, RC_SELECT_PLAYERS);
+        
     }
     
-    @Override
-    public void onActivityResult(int request, int response, Intent data) {
-        super.onActivityResult(request, response, data);
-        
-        if (request == RC_SIGN_IN) {
-            signInClicked = false;
-//            mResolvingConnectionFailure = false;
-            if (response == Activity.RESULT_OK) {
-                googleApiClient.connect();
-            } 
-//            else {
-//                BaseGameUtils.showActivityResultError(this, request, response, R.string.signin_other_error);
-//            }
-        }
-        
-        final ArrayList<String> invitees = data
-                .getStringArrayListExtra(Games.EXTRA_PLAYER_IDS);
+    public void createMatch() {
+        final ArrayList<String> invitees = new ArrayList<String>( Arrays.asList("g05776219623626509277") );
     	
     	TurnBasedMatchConfig tbmc = TurnBasedMatchConfig.builder()
     	        .addInvitedPlayers(invitees)
@@ -184,37 +178,66 @@ View.OnClickListener {
     	
     	Games.TurnBasedMultiplayer.createMatch(googleApiClient, tbmc).setResultCallback(rc);
     }
+    
+    @Override
+    public void onActivityResult(int request, int response, Intent data) {
+        super.onActivityResult(request, response, data);
+        
+        if (request == RC_SIGN_IN) {
+            signInClicked = false;
+//            mResolvingConnectionFailure = false;
+            if (response == Activity.RESULT_OK) {
+                googleApiClient.connect();
+            } 
+            else {
+//                BaseGameUtils.showActivityResultError(this, request, response, R.string.signin_other_error);
+            }
+        }
+        else if (request == RC_LOOK_AT_MATCHES) {
+            // Returning from the 'Select Match' dialog
 
-	@Override
-	public void onTurnBasedMatchReceived(TurnBasedMatch arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+            if (response != Activity.RESULT_OK) {
+                // user canceled
+                return;
+            }
 
-	@Override
-	public void onTurnBasedMatchRemoved(String arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+            TurnBasedMatch match = data
+                    .getParcelableExtra(Multiplayer.EXTRA_TURN_BASED_MATCH);
 
-	@Override
-	public void onInvitationReceived(Invitation arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+            if (match != null) {
+                updateMatch(match);
+            }
 
-	@Override
-	public void onInvitationRemoved(String arg0) {
-		// TODO Auto-generated method stub
-		
-	}
+            Log.d(TAG, "Match = " + match);
+        }
+        else if (request == RC_SELECT_PLAYERS) {
+        	
 
-	@Override
-	public void onConnectionFailed(ConnectionResult arg0) {
-		
-		Log.d(TAG, "Error: connection failed: "+arg0);
-		
-	}
+            if (response != Activity.RESULT_OK) {
+                // user canceled
+                return;
+            }
+        
+	        final ArrayList<String> invitees = data
+	                .getStringArrayListExtra(Games.EXTRA_PLAYER_IDS);
+	    	
+	    	TurnBasedMatchConfig tbmc = TurnBasedMatchConfig.builder()
+	    	        .addInvitedPlayers(invitees)
+	    	        .build();
+	    	
+	    	ResultCallback<InitiateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.InitiateMatchResult>() {
+				@Override
+				public void onResult(InitiateMatchResult result)
+				{
+					processResult(result);
+					
+				};
+				
+	    	};
+	    	
+	    	Games.TurnBasedMultiplayer.createMatch(googleApiClient, tbmc).setResultCallback(rc);
+        }
+    }
 	
     public void setViewVisibility() {
         boolean isSignedIn = (googleApiClient != null) && (googleApiClient.isConnected());
@@ -248,24 +271,17 @@ View.OnClickListener {
     public void setGameplayUI() {
         isDoingTurn = true;
         setViewVisibility();
-//        mDataView.setText(mTurnData.data);
-//        mTurnTextView.setText("Turn " + mTurnData.turnCounter);
     }
     
-    // startMatch() happens in response to the createTurnBasedMatch()
-    // above. This is only called on success, so we should have a
-    // valid match object. We're taking this opportunity to setup the
-    // game, saving our initial state. Calling takeTurn() will
-    // callback to OnTurnBasedMatchUpdated(), which will show the game
-    // UI.
-    public void startMatch(TurnBasedMatch match) {
+
+    public void startMatch(TurnBasedMatch match, String emojiId) {
         mTurnData = new TurnData();
         // Some basic turn data
-        mTurnData.data = "First turn";
+        mTurnData.data = emojiId;
 
         mMatch = match;
 
-        String playerId = Games.Players.getCurrentPlayerId(googleApiClient);
+        String playerId = Games.Players.getCurrentPlayerId(googleApiClient); //m2.ohara g11950741936762931340, causal.labs g05776219623626509277
         String myParticipantId = mMatch.getParticipantId(playerId);
         
         ResultCallback<TurnBasedMultiplayer.UpdateMatchResult> rc = new ResultCallback<TurnBasedMultiplayer.UpdateMatchResult>() {
@@ -288,28 +304,21 @@ View.OnClickListener {
         int turnStatus = match.getTurnStatus();
 
         switch (status) {
-            case TurnBasedMatch.MATCH_STATUS_CANCELED:
-                //showWarning("Canceled!", "This game was canceled!");
-                return;
             case TurnBasedMatch.MATCH_STATUS_EXPIRED:
-                //showWarning("Expired!", "This game is expired.  So sad!");
-                return;
-            case TurnBasedMatch.MATCH_STATUS_AUTO_MATCHING:
-                //showWarning("Waiting for auto-match...",
-//                        "We're still waiting for an automatch partner.");
+                showWarning("Expired!", "The emoji has expired");
                 return;
             case TurnBasedMatch.MATCH_STATUS_COMPLETE:
                 if (turnStatus == TurnBasedMatch.MATCH_TURN_STATUS_COMPLETE) {
-//                    showWarning(
-//                            "Complete!",
-//                            "This game is over; someone finished it, and so did you!  There is nothing to be done.");
+                    showWarning(
+                            "Sent!",
+                            "You've already sent an emoji");
                     break;
                 }
 
                 // Note that in this state, you must still call "Finish" yourself,
                 // so we allow this to continue.
-//                showWarning("Complete!",
-//                        "This game is over; someone finished it!  You can only finish it now.");
+                showWarning("Emoji sent",
+                        "You've already sent an emoji");
         }
 
         // OK, it's active. Check on turn status.
@@ -318,13 +327,12 @@ View.OnClickListener {
                 mTurnData = TurnData.unpersist(mMatch.getData());
                 setGameplayUI();
                 return;
+//            case TurnBasedMatch.MATCH_TURN_STATUS_INVITED:
+//                Intent intent = Games.TurnBasedMultiplayer.acceptInvitation(googleApiClient, arg1)
             case TurnBasedMatch.MATCH_TURN_STATUS_THEIR_TURN:
                 // Should return results.
-//                showWarning("Alas...", "It's not your turn.");
+                showWarning("Alas...", "It's not your turn.");
                 break;
-            case TurnBasedMatch.MATCH_TURN_STATUS_INVITED:
-//                showWarning("Good inititative!",
-//                        "Still waiting for invitations.\n\nBe patient!");
         }
 
         mTurnData = null;
@@ -336,25 +344,25 @@ View.OnClickListener {
     private void processResult(TurnBasedMultiplayer.InitiateMatchResult result) {
         TurnBasedMatch match = result.getMatch();
 
-//        if (!checkStatusCode(match, result.getStatus().getStatusCode())) {
-//            return;
-//        }
+        if (!checkStatusCode(match, result.getStatus().getStatusCode())) {
+            return;
+        }
 
         if (match.getData() != null) {
             // This is a game that has already started, so I'll just start
             updateMatch(match);
             return;
         }
-
-        startMatch(match);
+        
+        mMatch = result.getMatch();
     }
     
 
     public void processResult(TurnBasedMultiplayer.UpdateMatchResult result) {
         TurnBasedMatch match = result.getMatch();
-//        if (!checkStatusCode(match, result.getStatus().getStatusCode())) {
-//            return;
-//        }
+        if (!checkStatusCode(match, result.getStatus().getStatusCode())) {
+            return;
+        }
 
         isDoingTurn = (match.getTurnStatus() == TurnBasedMatch.MATCH_TURN_STATUS_MY_TURN);
 
@@ -366,29 +374,6 @@ View.OnClickListener {
         setViewVisibility();
     }
     
-//    public void showWarning(String title, String message) {
-//        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
-//
-//        // set title
-//        alertDialogBuilder.setTitle(title).setMessage(message);
-//
-//        // set dialog message
-//        alertDialogBuilder.setCancelable(false).setPositiveButton("OK",
-//                new DialogInterface.OnClickListener() {
-//                    @Override
-//                    public void onClick(DialogInterface dialog, int id) {
-//                        // if this button is clicked, close
-//                        // current activity
-//                    }
-//                });
-//
-//        // create alert dialog
-//        mAlertDialog = alertDialogBuilder.create();
-//
-//        // show it
-//        mAlertDialog.show();
-//    }
-    
     public void createGrid() {
         GridView gridview = (GridView) findViewById(R.id.gridview);
         gridview.setAdapter(new ImageAdapter(this));
@@ -396,18 +381,16 @@ View.OnClickListener {
         gridview.setOnItemLongClickListener(new OnItemLongClickListener() {
 
 			@Override
-			public boolean onItemLongClick(AdapterView<?> arg0, View v,
-					int arg2, long arg3) {
+			public boolean onItemLongClick(AdapterView<?> parent, View v,
+					int position, long id) {
 				
                 // Create a new ClipData.Item from the ImageView object's tag
-                ClipData.Item item = new ClipData.Item("Test data");
+                ClipData.Item item = new ClipData.Item(Integer.toString(position));
 
-                ClipData dragData = new ClipData("Test Data", new String[] {ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
+                ClipData dragData = new ClipData(Integer.toString(position), new String[] {ClipDescription.MIMETYPE_TEXT_PLAIN}, item);
 
                 // Instantiates the drag shadow builder.
                 View.DragShadowBuilder shadow = new DragShadowBuilder(v);
-                
-//                v.setOnDragListener(new DragEventListener());
 
                 // Starts the drag
 
@@ -423,9 +406,134 @@ View.OnClickListener {
     }
     
     public void setContactView() {
+    	
     	View contactView = findViewById(R.id.imageView1);
     	
-    	contactView.setOnDragListener(new DragEventListener());
+    	contactView.setOnDragListener(new DragEventListener(this));
     }
+    
+    public void onDragDrop(ClipData.Item item) {
+    	
+    	startMatch(mMatch, item.getText().toString());
+    }
+    
+    //********************************* Message display*//
+    
+    // Generic warning/info dialog
+    public void showWarning(String title, String message) {
+        AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+
+        // set title
+        alertDialogBuilder.setTitle(title).setMessage(message);
+
+        // set dialog message
+        alertDialogBuilder.setCancelable(false).setPositiveButton("OK",
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int id) {
+                        // if this button is clicked, close
+                        // current activity
+                    }
+                });
+
+        // create alert dialog
+        mAlertDialog = alertDialogBuilder.create();
+
+        // show it
+        mAlertDialog.show();
+    }
+    
+    public void showErrorMessage(TurnBasedMatch match, int statusCode,
+            int stringId) {
+
+        showWarning("Warning", getResources().getString(stringId));
+    }
+
+    // Returns false if something went wrong, probably. This should handle
+    // more cases, and probably report more accurate results.
+    private boolean checkStatusCode(TurnBasedMatch match, int statusCode) {
+        switch (statusCode) {
+            case GamesStatusCodes.STATUS_OK:
+                return true;
+            case GamesStatusCodes.STATUS_NETWORK_ERROR_OPERATION_DEFERRED:
+                // This is OK; the action is stored by Google Play Services and will
+                // be dealt with later.
+                Toast.makeText(
+                        this,
+                        "Stored action for later.  (Please remove this toast before release.)",
+                        Toast.LENGTH_SHORT).show();
+                // NOTE: This toast is for informative reasons only; please remove
+                // it from your final application.
+                return true;
+            case GamesStatusCodes.STATUS_MULTIPLAYER_ERROR_NOT_TRUSTED_TESTER:
+                showErrorMessage(match, statusCode,
+                        R.string.status_multiplayer_error_not_trusted_tester);
+                break;
+            case GamesStatusCodes.STATUS_MATCH_ERROR_ALREADY_REMATCHED:
+                showErrorMessage(match, statusCode,
+                        R.string.match_error_already_rematched);
+                break;
+            case GamesStatusCodes.STATUS_NETWORK_ERROR_OPERATION_FAILED:
+                showErrorMessage(match, statusCode,
+                        R.string.network_error_operation_failed);
+                break;
+            case GamesStatusCodes.STATUS_CLIENT_RECONNECT_REQUIRED:
+                showErrorMessage(match, statusCode,
+                        R.string.client_reconnect_required);
+                break;
+            case GamesStatusCodes.STATUS_INTERNAL_ERROR:
+                showErrorMessage(match, statusCode, R.string.internal_error);
+                break;
+            case GamesStatusCodes.STATUS_MATCH_ERROR_INACTIVE_MATCH:
+                showErrorMessage(match, statusCode,
+                        R.string.match_error_inactive_match);
+                break;
+            case GamesStatusCodes.STATUS_MATCH_ERROR_LOCALLY_MODIFIED:
+                showErrorMessage(match, statusCode,
+                        R.string.match_error_locally_modified);
+                break;
+            default:
+                showErrorMessage(match, statusCode, R.string.unexpected_status);
+                Log.d(TAG, "Did not have warning or string to deal with: "
+                        + statusCode);
+        }
+
+        return false;
+    }
+    
+	@Override
+	public void onInvitationReceived(Invitation invitation) {
+		Games.TurnBasedMultiplayer.acceptInvitation(googleApiClient, invitation.getInvitationId());
+	}
+    
+	@Override
+	public void onTurnBasedMatchReceived(TurnBasedMatch arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onTurnBasedMatchRemoved(String arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onInvitationRemoved(String arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+	
+	@Override
+	public void onConnectionSuspended(int arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void onConnectionFailed(ConnectionResult arg0) {
+		
+		Log.d(TAG, "Error: connection failed: "+arg0);
+	}
 
 }

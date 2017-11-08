@@ -10,6 +10,11 @@ import android.widget.Toast;
 
 public class DragEventListener implements View.OnDragListener {
 
+	private TurnBasedActivity turnBasedActivity;
+	
+	public DragEventListener(TurnBasedActivity turnBasedActivity) {
+		this.turnBasedActivity = turnBasedActivity;
+	}
     // This is the method that the system calls when it dispatches a drag event to the
     // listener.
     public boolean onDrag(View v, DragEvent event) {
@@ -80,7 +85,7 @@ public class DragEventListener implements View.OnDragListener {
 //                Toast.makeText(v.getContext(), "Dropped", Toast.LENGTH_LONG);
 
                 // Turns off any color tints
-                v.setBackgroundColor(Color.WHITE);
+                turnBasedActivity.onDragDrop(item);
 
                 // Invalidates the view to force a redraw
                 v.invalidate();
@@ -116,4 +121,5 @@ public class DragEventListener implements View.OnDragListener {
 
         return false;
     }
+    
 };

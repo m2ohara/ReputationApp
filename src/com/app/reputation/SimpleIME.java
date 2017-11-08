@@ -67,6 +67,7 @@ public void onKey(int primaryCode, int[] keyCodes) {
         Intent newIntent = new Intent(this, TurnBasedActivity.class);
         newIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(newIntent);
+        
         break;
     default:
         char code = (char)primaryCode;
